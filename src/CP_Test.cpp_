@@ -1,0 +1,38 @@
+#include <Arduino.h>
+#include <PilotController.h>
+
+#define POWER_OUT_PIN (1)
+#define CP_TX_PIN (42)
+#define CP_RX_PIN (2)
+
+#define MAX_CHARGE_CURRENT (6) // Maximum current in Amperes
+
+PilotController pilotController;
+
+bool mainPowerIsReady() {
+  // TODO: check in main power voltage
+  return true;
+}
+
+bool onPowerOnReq() {
+  digitalWrite(POWER_OUT_PIN, HIGH);
+
+  return true;
+}
+
+void onPowerOffReq() {
+  digitalWrite(POWER_OUT_PIN, LOW);
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(POWER_OUT_PIN, OUTPUT);
+  digitalWrite(POWER_OUT_PIN, LOW); // Set power output pin to LOW initially
+  
+  pilotController.begin(CP_TX_PIN, CP_RX_PIN, MAX_CHARGE_CURRENT);
+}
+
+void loop() {
+  delay(1000); // Delay for 1 second before the next iteration
+}

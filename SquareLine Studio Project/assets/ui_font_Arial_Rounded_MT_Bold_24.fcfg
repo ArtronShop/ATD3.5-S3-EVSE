@@ -1,0 +1,16 @@
+{
+  "codename": "Arial_Rounded_MT_Bold_24",
+  "ttf_path": "/assets/arialroundedmtbold.ttf",
+  "bin_path": "/assets\\ui_font_Arial_Rounded_MT_Bold_24.bin",
+  "c_path": "/assets\\ui_font_Arial_Rounded_MT_Bold_24.c",
+  "cfg_path": "/assets\\ui_font_Arial_Rounded_MT_Bold_24.fcfg",
+  "size": 24,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7f"
+  ],
+  "symbols": "",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

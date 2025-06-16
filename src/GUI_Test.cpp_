@@ -1,0 +1,49 @@
+#include <Arduino.h>
+#include <lvgl.h>
+#include <ATD3.5-S3.h>
+#include "gui/ui.h"
+
+void setup() {
+  Serial.begin(115200);
+
+  // Setup peripherals
+  Display.begin(0); // rotation number 0
+  Touch.begin();
+  Sound.begin();
+  // Card.begin(); // uncomment if you want to Read/Write/Play/Load file in MicroSD Card
+
+  // Map peripheral to LVGL
+  Display.useLVGL(); // Map display to LVGL
+  Touch.useLVGL(); // Map touch screen to LVGL
+  Sound.useLVGL(); // Map speaker to LVGL
+  // Card.useLVGL(); // Map MicroSD Card to LVGL File System
+
+  Display.enableAutoSleep(120); // Auto off display if not touch in 2 min
+  
+  // Add load your UI function
+  ui_init();
+
+
+  lv_label_set_text(ui_heading_label, "เชื่อมต่อหัวชาร์จ");
+  lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+  lv_label_set_text(ui_subtitle_label, "เพื่อเริ่มต้นการชาร์จ");
+  lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+
+  lv_label_set_text(ui_heading_label, "กดเริ่มต้นเพื่อชาร์จ");
+  lv_obj_add_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+
+  lv_label_set_text(ui_heading_label, "กำลังชาร์จ");
+  lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+  lv_label_set_text(ui_subtitle_label, "โปรดล็อครถของคุณ");
+  lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+
+  lv_label_set_text(ui_heading_label, "ชาร์จเสร็จสิ้น");
+  lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+  lv_label_set_text(ui_subtitle_label, "ปลดล็อกรถและถอดหัวชาร์จ");
+  lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+}
+
+void loop() {
+  Display.loop(); // Keep GUI work
+}
