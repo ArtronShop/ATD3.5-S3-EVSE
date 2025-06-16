@@ -14,6 +14,9 @@ PilotController pilotController;
 
 volatile bool user_confirm_start_flag = false;
 
+extern void Animation_play() ;
+extern void Animation_stop() ;
+
 bool mainPowerIsReady() {
   // TODO: check in main power voltage
   return true;
@@ -22,6 +25,17 @@ bool mainPowerIsReady() {
 bool onPowerOnReq() {
   if (user_confirm_start_flag) {
     digitalWrite(POWER_OUT_PIN, HIGH);
+    lv_safe_update([](void*) {
+      Animation_play();
+    });
+  } else {
+    lv_safe_update([](void*) {
+      if (lv_obj_has_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN)) {
+        lv_label_set_text(ui_heading_label, "กดเริ่มต้นเพื่อชาร์จ");
+        lv_obj_add_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+      }
+    });
   }
 
   return user_confirm_start_flag;
@@ -29,6 +43,9 @@ bool onPowerOnReq() {
 
 void onPowerOffReq() {
   digitalWrite(POWER_OUT_PIN, LOW);
+  lv_safe_update([](void*) {
+    Animation_stop();
+  });
 }
 
 void onStateChange(PilotState_t from, PilotState_t to) {
@@ -42,15 +59,18 @@ void onStateChange(PilotState_t from, PilotState_t to) {
   } else if (to == STATE_B) {
     if (from == STATE_A) {
       lv_safe_update([](void*) {
-        lv_label_set_text(ui_heading_label, "กดเริ่มต้นเพื่อชาร์จ");
-        lv_obj_add_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(ui_heading_label, "กำลังติดต่อกับรถ");
+        lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(ui_subtitle_label, "อาจใช้เวลาซักครู่หนึ่ง");
+        lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
       });
     } else if (from == STATE_C) {
       lv_label_set_text(ui_heading_label, "ชาร์จเสร็จสิ้น");
       lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
       lv_label_set_text(ui_subtitle_label, "ปลดล็อกรถและถอดหัวชาร์จ");
       lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+
+      user_confirm_start_flag = false;
     }
   } else if (to == STATE_C) {
     lv_safe_update([](void*) {
@@ -98,6 +118,9 @@ void setup() {
   ui_init();
 
   // Init UI
+  lv_label_set_text(ui_heading_label, "");
+  lv_label_set_text(ui_subtitle_label, "");
+
   lv_label_set_text(ui_power_value_label, "-");
   lv_label_set_text(ui_energy_value_label, "-");
   lv_label_set_text(ui_voltage_value_label, "-");
@@ -105,10 +128,6 @@ void setup() {
 
   // Add event handle
   lv_obj_add_event_cb(ui_start_btn, startBtnClickHandle, LV_EVENT_CLICKED, NULL);
-
-  // Animation
-  bar_Animation(ui_bar, 0);
-  circle_Animation(ui_car_backdrop, 800);
 
   pilotController.begin(CP_TX_PIN, CP_RX_PIN, MAX_CHARGE_CURRENT);
 }
