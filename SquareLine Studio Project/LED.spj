@@ -5265,7 +5265,7 @@
     "description": "",
     "board": "Eclipse with SDL for development on PC",
     "board_version": "v1.0.2",
-    "editor_version": "1.5.1",
+    "editor_version": "1.5.3",
     "image": "",
     "export_temp_image": false,
     "force_export_images": false,
@@ -5296,6 +5296,7 @@
     "drive_fatfs_path": "",
     "naming": null,
     "naming_force_lowercase": false,
+    "naming_add_subcomponent": false,
     "nidcnt": 1000114,
     "BitDepth": 16,
     "Name": "LED"
