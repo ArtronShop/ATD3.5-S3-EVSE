@@ -4,3 +4,6 @@
 [submodule "lib/lvgl"]
 	path = lib/lvgl
 	url = https://github.com/lvgl/lvgl.git
+[submodule "lib/ArtronShop_BL0940"]
+	path = lib/ArtronShop_BL0940
+	url = https://github.com/ArtronShop/ArtronShop_BL0940.git
