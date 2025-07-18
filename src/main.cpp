@@ -1,21 +1,27 @@
 #include <Arduino.h>
 #include <lvgl.h>
 #include <ATD3.5-S3.h>
-#include <PilotController.h>
+#include "PilotController.h"
+#include <MCM_BL0940.h>
 #include "gui/ui.h"
 
+static const char * TAG = "Main";
+
 #define POWER_OUT_PIN (1)
+#define BL0940_RX_PIN (7)
+#define BL0940_TX_PIN (6)
 
 #define MAX_CHARGE_CURRENT (MAX_CURRENT_6A) // Maximum current in Amperes
 
 PilotController pilotController;
+BL0940 bl0940;
 
-volatile bool user_confirm_start_flag = false;
+static bool user_confirm_start_flag = false;
+static bool power_out = false;
+static float energy_at_start = -1.0f;
 
 extern void Animation_play() ;
 extern void Animation_stop() ;
-
-static bool power_out = false;
 
 void onStateChangeCallback(PilotState_t from, PilotState_t to) {
   if (to == STATE_A) {
@@ -27,6 +33,7 @@ void onStateChangeCallback(PilotState_t from, PilotState_t to) {
     });
 
     user_confirm_start_flag = false;
+    energy_at_start = -1.0f;
   } else if (to == STATE_B) {
     if (from == STATE_A) {
       lv_safe_update([](void*) {
@@ -60,6 +67,49 @@ void startBtnClickHandle(lv_event_t * event) {
   lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
 }
 
+void powerValueUpdate(lv_timer_t *) {
+  { // Voltage
+    float voltage;
+    if (bl0940.getVoltage(&voltage)) {
+      lv_label_set_text_fmt(ui_voltage_value_label, "%.01f", voltage);
+    } else {
+      lv_label_set_text(ui_voltage_value_label, "-");
+    }
+  }
+
+  { // Current
+    float current; // unit A
+    if (bl0940.getCurrent(&current)) {
+      lv_label_set_text_fmt(ui_current_value_label, "%.02f", current);
+    } else {
+      lv_label_set_text(ui_current_value_label, "-");
+    }
+  }
+
+  { // Power
+    float activePower; // unit W
+    if (bl0940.getActivePower(&activePower)) {
+      lv_label_set_text_fmt(ui_power_value_label, "%.01f", activePower / 1000.0f);
+    } else {
+      lv_label_set_text(ui_power_value_label, "-");
+    }
+  }
+  
+  { // Energy
+    if (energy_at_start > 0) {
+      float activeEnergy; // uint kW
+      if (bl0940.getActiveEnergy(&activeEnergy)) {
+        activeEnergy -= energy_at_start;
+        lv_label_set_text_fmt(ui_energy_value_label, "%.01f", activeEnergy);
+      } else {
+        lv_label_set_text(ui_energy_value_label, "-");
+      }
+    } else {
+      lv_label_set_text(ui_energy_value_label, "-");
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -71,6 +121,7 @@ void setup() {
   Touch.begin();
   Sound.begin();
   // Card.begin(); // uncomment if you want to Read/Write/Play/Load file in MicroSD Card
+  bl0940.begin(Serial1, BL0940_RX_PIN, BL0940_TX_PIN); // RX pin - TX pin 
 
   // Map peripheral to LVGL
   Display.useLVGL(); // Map display to LVGL
@@ -95,8 +146,15 @@ void setup() {
   // Add event handle
   lv_obj_add_event_cb(ui_start_btn, startBtnClickHandle, LV_EVENT_CLICKED, NULL);
 
+  bl0940.Reset();
+  bl0940.setFrequency(50); //50[Hz]
+  bl0940.setUpdateRate(400); //400[ms]
+
   pilotController.begin(MAX_CHARGE_CURRENT);
   pilotController.onStateChange(onStateChangeCallback);
+
+  // Add timer
+  lv_timer_create(powerValueUpdate, 2000, NULL);
 }
 
 void loop() {
@@ -128,6 +186,14 @@ void loop() {
             lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
           }
         });
+      }
+    }
+    if (energy_at_start < 0) {
+      float activeEnergy; // uint kW
+      if (bl0940.getActiveEnergy(&activeEnergy)) {
+        energy_at_start = activeEnergy;
+      } else {
+        ESP_LOGE(TAG, "Get energy at start fail");
       }
     }
   } else {

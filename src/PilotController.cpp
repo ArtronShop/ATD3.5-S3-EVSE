@@ -103,20 +103,25 @@ PilotState_t PilotController::getLastState() {
 }
 
 bool PilotController::loop() {
-    PilotState_t last_state = (PilotState_t) pilotController_register.SR.ST;
+    static unsigned long timer = 0;
+    if ((millis() < timer) || (timer == 0) || ((millis() - timer) >= 100)) { // polling 100 mS
+      timer = millis();
 
-    if (!this->readRegister(SR_REGISTER, (uint8_t*)(&pilotController_register.SR))) {
-        ESP_LOGE(TAG, "Read status registor fail !");
-        return false;
-    }
+        PilotState_t last_state = (PilotState_t) pilotController_register.SR.ST;
 
-    // ESP_LOGV(TAG, "State is %c", StateNumberToChar((int) pilotController_register.SR.ST));
+        if (!this->readRegister(SR_REGISTER, (uint8_t*)(&pilotController_register.SR))) {
+            ESP_LOGE(TAG, "Read status registor fail !");
+            return false;
+        }
 
-    if (pilotController_register.SR.STCIF) {
-        ESP_LOGV(TAG, "State change from %c to %c", StateNumberToChar((int) last_state), StateNumberToChar((int) pilotController_register.SR.ST));
+        // ESP_LOGV(TAG, "State is %c", StateNumberToChar((int) pilotController_register.SR.ST));
 
-        if (this->onStateChange_cb) {
-            this->onStateChange_cb(last_state, (PilotState_t) pilotController_register.SR.ST);
+        if (pilotController_register.SR.STCIF) {
+            ESP_LOGV(TAG, "State change from %c to %c", StateNumberToChar((int) last_state), StateNumberToChar((int) pilotController_register.SR.ST));
+
+            if (this->onStateChange_cb) {
+                this->onStateChange_cb(last_state, (PilotState_t) pilotController_register.SR.ST);
+            }
         }
     }
 
