@@ -61,10 +61,13 @@ void IRAM_ATTR cpPWMTimerISR(void * args) {
             controller->setCPLogic(HIGH);
             controller->pwm_state = 1;
 
-            // delayMicroseconds(10);
+            delayMicroseconds(10);
 
-            cp_mV_in_pwm_high_last = getCPVoltage();
-            cp_mV_in_pwm_high_last_update_flag = true;
+            int v = getCPVoltage();
+            if ((v >= -13000) && (v <= 13000)) {
+                cp_mV_in_pwm_high_last = v;
+                cp_mV_in_pwm_high_last_update_flag = true;
+            }
         } else if (controller->pwm_state == 1) {
             startPWMTimer(900);
 
@@ -153,7 +156,7 @@ void PilotController::run() {
         ESP_LOGI(TAG, "Transitioning to STATE_A: EVSE Ready, Vehicle Not connected");
     } else if (state == STATE_A) {// State A : EVSE Ready, Vehicle Not connected
         int cp_mV = getCPVoltage();
-        if ((cp_mV >= 8500) && (cp_mV <= 9500)) { // Check if the CP voltage is within the range for state B (9V)
+        if ((cp_mV < 10000) && (cp_mV > 5000)) { // Check if the CP voltage is within the range for state B (9V +-1%)
             if (mainPowerIsReady()) { // Main power is working
                 // Start Timer for send PWM signal
                 setCPLogic(LOW); // Set TX pin to LOW to stop output +12V at CP pin
@@ -176,7 +179,7 @@ void PilotController::run() {
     } else if (state == STATE_B) { // State B : EVSE Ready, Vehicle Connected
         if (cp_mV_in_pwm_high_last_update_flag) {
             cp_mV_in_pwm_high_last_update_flag = false;
-            if ((cp_mV_in_pwm_high_last >= 5500) && (cp_mV_in_pwm_high_last <= 6500)) {
+            if ((cp_mV_in_pwm_high_last >= 5000) && (cp_mV_in_pwm_high_last <= 7000)) {
                 if (onPowerOnReq()) {
                     ESP_LOGI(TAG, "Transitioning to STATE_C: EVSE Ready, Vehicle Connected, Power out ON");
                     state = STATE_C; // Transition to state B (EVSE Ready, Vehicle Connected and Ready to charge)
@@ -184,7 +187,7 @@ void PilotController::run() {
                 } else {
                     ESP_LOGI(TAG, "Ready to STATE_C but wait user confirm: EVSE Ready, Vehicle Connected, Power out stall Off");
                 }
-            } else if (cp_mV_in_pwm_high_last >= 9500) {
+            } else if (cp_mV_in_pwm_high_last > 7000) {
                 ESP_LOGI(TAG, "Transitioning to STATE_A: detect disconnect cabal (%d mV)", cp_mV_in_pwm_high_last);
                 timerStop(cp_pwm_timer_handle);
                 setCPLogic(HIGH);
@@ -196,7 +199,7 @@ void PilotController::run() {
             cp_mV_in_pwm_low_last_update_flag = false;
             // ESP_LOGI(TAG, "CP in low : %d", cp_mV_in_pwm_low_last);
             if (cp_mV_in_pwm_low_last > -10000) {
-                ESP_LOGI(TAG, "Transitioning to STATE_ERROR: CP voltage in negative pluse too low");
+                ESP_LOGI(TAG, "Transitioning to STATE_ERROR: CP voltage in negative pluse too low (%d mV)", cp_mV_in_pwm_low_last);
 
                 state = STATE_ERROR; // Transition to error state if CP voltage is too low
                 onStateChange(STATE_B, STATE_ERROR);
@@ -205,19 +208,19 @@ void PilotController::run() {
     } else if (state == STATE_C) { // State C : EVSE Ready, Vehicle Connected
         if (cp_mV_in_pwm_high_last_update_flag) {
             cp_mV_in_pwm_high_last_update_flag = false;
-            if (cp_mV_in_pwm_high_last >= 6500) {
+            if (cp_mV_in_pwm_high_last > 7000) {
                 // Change finish
                 onPowerOffReq();
                 state = STATE_B;
                 onStateChange(STATE_C, STATE_B);
-                ESP_LOGI(TAG, "Transitioning to STATE_B: Change Finish, Power out OFF");
-            } else if (cp_mV_in_pwm_high_last < 5500) {
+                ESP_LOGI(TAG, "Transitioning to STATE_B: Change Finish, Power out OFF (%d mV)", cp_mV_in_pwm_high_last);
+            }/* else if (cp_mV_in_pwm_high_last < 5000) {
                 ESP_LOGI(TAG, "Transitioning to STATE_ERROR: CP voltage in positive pluse too low (%d mV)", cp_mV_in_pwm_high_last);
 
                 onPowerOffReq();
                 onStateChange(STATE_C, STATE_ERROR);
                 state = STATE_ERROR; // Transition to error state if CP voltage is too low
-            }
+            }*/
         }
     } else if (state == STATE_ERROR) {
         timerStop(cp_pwm_timer_handle);
