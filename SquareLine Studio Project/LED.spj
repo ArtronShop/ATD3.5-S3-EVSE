@@ -1729,7 +1729,7 @@
                       {
                         "nid": 1030,
                         "strtype": "LABEL/Text",
-                        "strval": "Power (W)",
+                        "strval": "Power (kW)",
                         "InheritedType": 10
                       },
                       {
@@ -3729,8 +3729,7 @@
                 "InheritedType": 11
               }
             ],
-            "saved_objtypeKey": "CONTAINER",
-            "tree_closed": true
+            "saved_objtypeKey": "CONTAINER"
           },
           {
             "guid": "GUID81578502-961768S614162",
