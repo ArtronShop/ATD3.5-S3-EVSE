@@ -5,10 +5,8 @@
 #include "gui/ui.h"
 
 #define POWER_OUT_PIN (1)
-#define CP_TX_PIN (42)
-#define CP_RX_PIN (2)
 
-#define MAX_CHARGE_CURRENT (6) // Maximum current in Amperes
+#define MAX_CHARGE_CURRENT (MAX_CURRENT_6A) // Maximum current in Amperes
 
 PilotController pilotController;
 
@@ -17,38 +15,9 @@ volatile bool user_confirm_start_flag = false;
 extern void Animation_play() ;
 extern void Animation_stop() ;
 
-bool mainPowerIsReady() {
-  // TODO: check in main power voltage
-  return true;
-}
+static bool power_out = false;
 
-bool onPowerOnReq() {
-  if (user_confirm_start_flag) {
-    digitalWrite(POWER_OUT_PIN, HIGH);
-    lv_safe_update([](void*) {
-      Animation_play();
-    });
-  } else {
-    lv_safe_update([](void*) {
-      if (lv_obj_has_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN)) {
-        lv_label_set_text(ui_heading_label, "กดเริ่มต้นเพื่อชาร์จ");
-        lv_obj_add_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
-      }
-    });
-  }
-
-  return user_confirm_start_flag;
-}
-
-void onPowerOffReq() {
-  digitalWrite(POWER_OUT_PIN, LOW);
-  lv_safe_update([](void*) {
-    Animation_stop();
-  });
-}
-
-void onStateChange(PilotState_t from, PilotState_t to) {
+void onStateChangeCallback(PilotState_t from, PilotState_t to) {
   if (to == STATE_A) {
     lv_safe_update([](void*) {
       lv_label_set_text(ui_heading_label, "เชื่อมต่อหัวชาร์จ");
@@ -56,6 +25,8 @@ void onStateChange(PilotState_t from, PilotState_t to) {
       lv_label_set_text(ui_subtitle_label, "เพื่อเริ่มต้นการชาร์จ");
       lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
     });
+
+    user_confirm_start_flag = false;
   } else if (to == STATE_B) {
     if (from == STATE_A) {
       lv_safe_update([](void*) {
@@ -65,21 +36,16 @@ void onStateChange(PilotState_t from, PilotState_t to) {
         lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
       });
     } else if (from == STATE_C) {
-      lv_label_set_text(ui_heading_label, "ชาร์จเสร็จสิ้น");
-      lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
-      lv_label_set_text(ui_subtitle_label, "ปลดล็อกรถและถอดหัวชาร์จ");
-      lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
-
-      user_confirm_start_flag = false;
+      lv_safe_update([](void*) {
+        lv_label_set_text(ui_heading_label, "ชาร์จเสร็จสิ้น");
+        lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(ui_subtitle_label, "ปลดล็อกรถและถอดหัวชาร์จ");
+        lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+      });
     }
   } else if (to == STATE_C) {
-    lv_safe_update([](void*) {
-      lv_label_set_text(ui_heading_label, "กำลังชาร์จ");
-      lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
-      lv_label_set_text(ui_subtitle_label, "โปรดล็อครถของคุณ");
-      lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
-    });
-  } else if (to == STATE_ERROR) {
+    
+  } else if (to == STATE_F) {
     lv_safe_update([](void*) {
       lv_label_set_text(ui_heading_label, "เกิดข้อผิดพลาด");
       lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
@@ -129,10 +95,53 @@ void setup() {
   // Add event handle
   lv_obj_add_event_cb(ui_start_btn, startBtnClickHandle, LV_EVENT_CLICKED, NULL);
 
-  pilotController.begin(CP_TX_PIN, CP_RX_PIN, MAX_CHARGE_CURRENT);
+  pilotController.begin(MAX_CHARGE_CURRENT);
+  pilotController.onStateChange(onStateChangeCallback);
 }
 
 void loop() {
   Display.loop(); // Keep GUI work
+  pilotController.loop();
+
+  if (pilotController.getLastState() == STATE_C) {
+    if (!power_out) {
+      if (user_confirm_start_flag) {
+        digitalWrite(POWER_OUT_PIN, HIGH); // Power out ON
+        power_out = true;
+        Serial.println("Power out ON !");
+
+        // UI update
+        lv_safe_update([](void*) {
+          lv_label_set_text(ui_heading_label, "กำลังชาร์จ");
+          lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+          lv_label_set_text(ui_subtitle_label, "โปรดล็อครถของคุณ");
+          lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+
+          Animation_play();
+        });
+      } else {
+        // UI update
+        lv_safe_update([](void*) {
+          if (lv_obj_has_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN)) {
+            lv_label_set_text(ui_heading_label, "กดเริ่มต้นเพื่อชาร์จ");
+            lv_obj_add_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+          }
+        });
+      }
+    }
+  } else {
+    if (power_out) {
+      digitalWrite(POWER_OUT_PIN, LOW); // Power out OFF
+      power_out = false;
+      Serial.println("Power out OFF !");
+
+      // UI update
+      lv_safe_update([](void*) {
+        Animation_stop();
+      });
+    }
+  }
+
   delay(5);
 }

@@ -1,27 +1,28 @@
 #include <Arduino.h>
-#include <PilotController.h>
+#include "PilotController.h"
 
 #define POWER_OUT_PIN (1)
-#define CP_TX_PIN (42)
-#define CP_RX_PIN (2)
 
-#define MAX_CHARGE_CURRENT (6) // Maximum current in Amperes
+#define MAX_CHARGE_CURRENT MAX_CURRENT_6A // Maximum current in Amperes
 
 PilotController pilotController;
 
-bool mainPowerIsReady() {
-  // TODO: check in main power voltage
-  return true;
-}
+static bool power_out = false;
 
-bool onPowerOnReq() {
-  digitalWrite(POWER_OUT_PIN, HIGH);
-
-  return true;
-}
-
-void onPowerOffReq() {
-  digitalWrite(POWER_OUT_PIN, LOW);
+void onStateChangeCallback(PilotState_t from, PilotState_t to) {
+  if (to == STATE_C) {
+    if (!power_out) {
+      digitalWrite(POWER_OUT_PIN, HIGH); // Power out ON
+      power_out = true;
+      Serial.println("Power out ON !");
+    }
+  } else {
+    if (power_out) {
+      digitalWrite(POWER_OUT_PIN, LOW); // Power out OFF
+      power_out = false;
+      Serial.println("Power out OFF !");
+    }
+  }
 }
 
 void setup() {
@@ -29,10 +30,13 @@ void setup() {
 
   pinMode(POWER_OUT_PIN, OUTPUT);
   digitalWrite(POWER_OUT_PIN, LOW); // Set power output pin to LOW initially
+  power_out = false;
   
-  pilotController.begin(CP_TX_PIN, CP_RX_PIN, MAX_CHARGE_CURRENT);
+  pilotController.begin(MAX_CHARGE_CURRENT);
+  pilotController.onStateChange(onStateChangeCallback);
 }
 
 void loop() {
-  delay(1000); // Delay for 1 second before the next iteration
+  pilotController.loop();
+  delay(100); // Delay for 1 second before the next iteration
 }
