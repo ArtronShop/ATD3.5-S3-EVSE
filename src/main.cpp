@@ -8,8 +8,8 @@
 static const char * TAG = "Main";
 
 #define POWER_OUT_PIN (1)
-#define BL0940_RX_PIN (7)
-#define BL0940_TX_PIN (6)
+#define BL0940_RX_PIN (6)
+#define BL0940_TX_PIN (7)
 
 #define MAX_CHARGE_CURRENT (MAX_CURRENT_6A) // Maximum current in Amperes
 
@@ -80,6 +80,9 @@ void powerValueUpdate(lv_timer_t *) {
   { // Current
     float current; // unit A
     if (bl0940.getCurrent(&current)) {
+      /* if (current < 0.5) { // if less then 0.5A
+        current = 0; // maybe is noise so show zero
+      } */
       lv_label_set_text_fmt(ui_current_value_label, "%.02f", current);
     } else {
       lv_label_set_text(ui_current_value_label, "-");
@@ -135,8 +138,14 @@ void setup() {
   ui_init();
 
   // Init UI
+  /*
   lv_label_set_text(ui_heading_label, "");
   lv_label_set_text(ui_subtitle_label, "");
+  */
+  lv_label_set_text(ui_heading_label, "เชื่อมต่อหัวชาร์จ");
+  lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+  lv_label_set_text(ui_subtitle_label, "เพื่อเริ่มต้นการชาร์จ");
+  lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
 
   lv_label_set_text(ui_power_value_label, "-");
   lv_label_set_text(ui_energy_value_label, "-");
@@ -149,6 +158,8 @@ void setup() {
   bl0940.Reset();
   bl0940.setFrequency(50); //50[Hz]
   bl0940.setUpdateRate(400); //400[ms]
+  bl0940.setCurrentOffset(-52);
+  bl0940.setActivePowerOffset(80);
 
   pilotController.begin(MAX_CHARGE_CURRENT);
   pilotController.onStateChange(onStateChangeCallback);
