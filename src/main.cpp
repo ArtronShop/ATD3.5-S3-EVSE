@@ -156,8 +156,8 @@ void setup() {
   lv_obj_add_event_cb(ui_start_btn, startBtnClickHandle, LV_EVENT_CLICKED, NULL);
 
   bl0940.Reset();
-  bl0940.setFrequency(50); //50[Hz]
-  bl0940.setUpdateRate(400); //400[ms]
+  bl0940.setFrequency(50); // 50 Hz
+  bl0940.setUpdateRate(400); // 400 mS
   bl0940.setCurrentOffset(-52);
   bl0940.setActivePowerOffset(80);
 
