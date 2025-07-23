@@ -33,6 +33,10 @@ lv_obj_t * ui_heading_label = NULL;
 lv_obj_t * ui_subtitle_label = NULL;
 lv_obj_t * ui_start_btn = NULL;
 lv_obj_t * ui_Label1 = NULL;
+lv_obj_t * ui_emergency_dialog = NULL;
+lv_obj_t * ui_Image4 = NULL;
+lv_obj_t * ui_Label3 = NULL;
+lv_obj_t * ui_Label5 = NULL;
 // event funtions
 
 // build funtions
@@ -320,6 +324,52 @@ void ui_Index_screen_init(void)
     lv_obj_set_style_text_opa(ui_Label1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label1, &ui_font_Kanit20, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    ui_emergency_dialog = lv_obj_create(ui_Index);
+    lv_obj_set_width(ui_emergency_dialog, LV_SIZE_CONTENT);   /// 326
+    lv_obj_set_height(ui_emergency_dialog, LV_SIZE_CONTENT);    /// 228
+    lv_obj_set_align(ui_emergency_dialog, LV_ALIGN_CENTER);
+    lv_obj_set_flex_flow(ui_emergency_dialog, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(ui_emergency_dialog, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_add_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_clear_flag(ui_emergency_dialog, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_radius(ui_emergency_dialog, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_emergency_dialog, lv_color_hex(0xFCFF00), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_emergency_dialog, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_side(ui_emergency_dialog, LV_BORDER_SIDE_NONE, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_left(ui_emergency_dialog, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(ui_emergency_dialog, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(ui_emergency_dialog, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(ui_emergency_dialog, 20, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Image4 = lv_img_create(ui_emergency_dialog);
+    lv_img_set_src(ui_Image4, &ui_img_alert_png);
+    lv_obj_set_width(ui_Image4, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Image4, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_Image4, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_Image4, LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_clear_flag(ui_Image4, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_img_recolor(ui_Image4, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_img_recolor_opa(ui_Image4, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Label3 = lv_label_create(ui_emergency_dialog);
+    lv_obj_set_width(ui_Label3, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label3, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_Label3, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label3, "หยุดฉุกเฉิน");
+    lv_obj_set_style_text_color(ui_Label3, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label3, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label3, &ui_font_Kanit40, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Label5 = lv_label_create(ui_emergency_dialog);
+    lv_obj_set_width(ui_Label5, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label5, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_Label5, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label5,
+                      "ปลดสวิตช์หยุดฉุกเฉินเพื่อดำเนินการต่อ");
+    lv_obj_set_style_text_color(ui_Label5, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_Label5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label5, &ui_font_Kanit20, LV_PART_MAIN | LV_STATE_DEFAULT);
+
 }
 
 void ui_Index_screen_destroy(void)
@@ -355,5 +405,9 @@ void ui_Index_screen_destroy(void)
     ui_subtitle_label = NULL;
     ui_start_btn = NULL;
     ui_Label1 = NULL;
+    ui_emergency_dialog = NULL;
+    ui_Image4 = NULL;
+    ui_Label3 = NULL;
+    ui_Label5 = NULL;
 
 }

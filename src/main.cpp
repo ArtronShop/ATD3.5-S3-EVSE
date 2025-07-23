@@ -10,6 +10,8 @@ static const char * TAG = "Main";
 #define POWER_OUT_PIN (1)
 #define BL0940_RX_PIN (6)
 #define BL0940_TX_PIN (7)
+#define STOP_SW_PIN   (41)
+#define STOP_SW_ACTIVE (LOW)
 
 #define MAX_CHARGE_CURRENT (MAX_CURRENT_6A) // Maximum current in Amperes
 
@@ -180,23 +182,19 @@ void loop() {
         Serial.println("Power out ON !");
 
         // UI update
-        lv_safe_update([](void*) {
-          lv_label_set_text(ui_heading_label, "กำลังชาร์จ");
-          lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
-          lv_label_set_text(ui_subtitle_label, "โปรดล็อครถของคุณ");
-          lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(ui_heading_label, "กำลังชาร์จ");
+        lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(ui_subtitle_label, "โปรดล็อครถของคุณ");
+        lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
 
-          Animation_play();
-        });
+        Animation_play();
       } else {
         // UI update
-        lv_safe_update([](void*) {
-          if (lv_obj_has_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN)) {
-            lv_label_set_text(ui_heading_label, "กดเริ่มต้นเพื่อชาร์จ");
-            lv_obj_add_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
-          }
-        });
+        if (lv_obj_has_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN)) {
+          lv_label_set_text(ui_heading_label, "กดเริ่มต้นเพื่อชาร์จ");
+          lv_obj_add_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+          lv_obj_clear_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+        }
       }
     }
     if (energy_at_start < 0) {
@@ -214,9 +212,17 @@ void loop() {
       Serial.println("Power out OFF !");
 
       // UI update
-      lv_safe_update([](void*) {
-        Animation_stop();
-      });
+      Animation_stop();
+    }
+  }
+
+  if (digitalRead(STOP_SW_PIN) == STOP_SW_ACTIVE) { // if Stop Switch are press
+    if (!lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog not show
+      lv_obj_clear_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // show Emergency Dialog
+    }
+  } else { // but if Stop Switch not press
+    if (lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog show
+      lv_obj_add_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // hide Emergency Dialog
     }
   }
 

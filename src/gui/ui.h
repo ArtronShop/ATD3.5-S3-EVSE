@@ -33,6 +33,7 @@ extern lv_obj_t * ui____initial_actions0;
 LV_IMG_DECLARE(ui_img_505560643);    // assets/Artron - 2 1.png
 LV_IMG_DECLARE(ui_img_303578728);    // assets/charging-station 1.png
 LV_IMG_DECLARE(ui_img_hatchback_1_png);    // assets/hatchback 1.png
+LV_IMG_DECLARE(ui_img_alert_png);    // assets/alert.png
 
 // FONTS
 LV_FONT_DECLARE(ui_font_Arial_Rounded_MT_Bold_24);

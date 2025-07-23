@@ -41,6 +41,10 @@ extern lv_obj_t * ui_heading_label;
 extern lv_obj_t * ui_subtitle_label;
 extern lv_obj_t * ui_start_btn;
 extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_emergency_dialog;
+extern lv_obj_t * ui_Image4;
+extern lv_obj_t * ui_Label3;
+extern lv_obj_t * ui_Label5;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus
