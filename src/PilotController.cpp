@@ -110,7 +110,7 @@ bool PilotController::loop() {
         PilotState_t last_state = (PilotState_t) pilotController_register.SR.ST;
 
         if (!this->readRegister(SR_REGISTER, (uint8_t*)(&pilotController_register.SR))) {
-            ESP_LOGE(TAG, "Read status registor fail !");
+            ESP_LOGE(TAG, "Read status register fail !");
             return false;
         }
 

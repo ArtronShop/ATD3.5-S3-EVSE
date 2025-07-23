@@ -3,6 +3,8 @@
 #include <ATD3.5-S3.h>
 #include "PilotController.h"
 #include <MCM_BL0940.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include "gui/ui.h"
 
 static const char * TAG = "Main";
@@ -12,11 +14,15 @@ static const char * TAG = "Main";
 #define BL0940_TX_PIN (7)
 #define STOP_SW_PIN   (41)
 #define STOP_SW_ACTIVE (LOW)
+#define DS18B20_PIN   (4)
 
 #define MAX_CHARGE_CURRENT (MAX_CURRENT_6A) // Maximum current in Amperes
+#define OVER_TEMP_THRESHOLD (60.0f)
 
 PilotController pilotController;
 BL0940 bl0940;
+OneWire oneWire(DS18B20_PIN);
+DallasTemperature ds18b20(&oneWire);
 
 static bool user_confirm_start_flag = false;
 static bool power_out = false;
@@ -69,49 +75,46 @@ void startBtnClickHandle(lv_event_t * event) {
   lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
 }
 
+float voltage;
+float current; // unit A
+float activePower; // unit W
+float activeEnergy; // uint kW
+
 void powerValueUpdate(lv_timer_t *) {
-  { // Voltage
-    float voltage;
-    if (bl0940.getVoltage(&voltage)) {
-      lv_label_set_text_fmt(ui_voltage_value_label, "%.01f", voltage);
-    } else {
-      lv_label_set_text(ui_voltage_value_label, "-");
-    }
+  // Voltage
+  if (bl0940.getVoltage(&voltage)) {
+    lv_label_set_text_fmt(ui_voltage_value_label, "%.01f", voltage);
+  } else {
+    lv_label_set_text(ui_voltage_value_label, "-");
   }
 
-  { // Current
-    float current; // unit A
-    if (bl0940.getCurrent(&current)) {
-      /* if (current < 0.5) { // if less then 0.5A
-        current = 0; // maybe is noise so show zero
-      } */
-      lv_label_set_text_fmt(ui_current_value_label, "%.02f", current);
-    } else {
-      lv_label_set_text(ui_current_value_label, "-");
-    }
+  // Current
+  if (bl0940.getCurrent(&current)) {
+    /* if (current < 0.5) { // if less then 0.5A
+      current = 0; // maybe is noise so show zero
+    } */
+    lv_label_set_text_fmt(ui_current_value_label, "%.02f", current);
+  } else {
+    lv_label_set_text(ui_current_value_label, "-");
   }
 
-  { // Power
-    float activePower; // unit W
-    if (bl0940.getActivePower(&activePower)) {
-      lv_label_set_text_fmt(ui_power_value_label, "%.01f", activePower / 1000.0f);
-    } else {
-      lv_label_set_text(ui_power_value_label, "-");
-    }
+  // Power
+  if (bl0940.getActivePower(&activePower)) {
+    lv_label_set_text_fmt(ui_power_value_label, "%.01f", activePower / 1000.0f);
+  } else {
+    lv_label_set_text(ui_power_value_label, "-");
   }
   
-  { // Energy
-    if (energy_at_start > 0) {
-      float activeEnergy; // uint kW
-      if (bl0940.getActiveEnergy(&activeEnergy)) {
-        activeEnergy -= energy_at_start;
-        lv_label_set_text_fmt(ui_energy_value_label, "%.01f", activeEnergy);
-      } else {
-        lv_label_set_text(ui_energy_value_label, "-");
-      }
+  // Energy
+  if (energy_at_start >= 0) {
+    if (bl0940.getActiveEnergy(&activeEnergy)) {
+      activeEnergy -= energy_at_start;
+      lv_label_set_text_fmt(ui_energy_value_label, "%.01f", activeEnergy);
     } else {
       lv_label_set_text(ui_energy_value_label, "-");
     }
+  } else {
+    lv_label_set_text(ui_energy_value_label, "-");
   }
 }
 
@@ -166,6 +169,8 @@ void setup() {
   pilotController.begin(MAX_CHARGE_CURRENT);
   pilotController.onStateChange(onStateChangeCallback);
 
+  ds18b20.begin();
+
   // Add timer
   lv_timer_create(powerValueUpdate, 2000, NULL);
 }
@@ -173,6 +178,53 @@ void setup() {
 void loop() {
   Display.loop(); // Keep GUI work
   pilotController.loop();
+
+  bool protection_active = false;
+
+  // Temperature protection
+  ds18b20.requestTemperatures();
+  float temp_c = ds18b20.getTempCByIndex(0);
+  if (temp_c >= OVER_TEMP_THRESHOLD) { // Check over temperature
+    protection_active = true; // Over Temp Protect
+  }
+
+  // Over currant protection
+  if (
+    ((MAX_CHARGE_CURRENT == MAX_CURRENT_6A) && (current > 8.0f)) ||
+    ((MAX_CHARGE_CURRENT == MAX_CURRENT_12A) && (current > 14.0f)) ||
+    ((MAX_CHARGE_CURRENT == MAX_CURRENT_18A) && (current > 20.0f)) ||
+    ((MAX_CHARGE_CURRENT == MAX_CURRENT_24A) && (current > 26.0f)) ||
+    ((MAX_CHARGE_CURRENT == MAX_CURRENT_30A) && (current > 32.0f))
+  ) {
+    protection_active = true; // Over Currant Protect
+  }
+
+  // Stop detect
+  if (digitalRead(STOP_SW_PIN) == STOP_SW_ACTIVE) { // if Stop Switch are press
+    if (!lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog not show
+      lv_obj_clear_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // show Emergency Dialog
+    }
+    protection_active = true; // Stop Switch Active
+  } else { // but if Stop Switch not press
+    if (lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog show
+      lv_obj_add_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // hide Emergency Dialog
+    }
+  }
+
+  if (protection_active) {
+    if (power_out) {
+      digitalWrite(POWER_OUT_PIN, LOW); // Power out OFF
+      power_out = false;
+      Serial.println("Power out OFF by protection active !");
+    }
+    if (user_confirm_start_flag) {
+      user_confirm_start_flag = false;
+    }
+    lv_label_set_text(ui_heading_label, "ระบบป้องกันทำงาน");
+    lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_label_set_text(ui_subtitle_label, "โปรดถอดหัวชาร์จ และตรวจสอบหัวชาร์จ");
+    lv_obj_clear_flag(ui_subtitle_label, LV_OBJ_FLAG_HIDDEN);
+  }
 
   if (pilotController.getLastState() == STATE_C) {
     if (!power_out) {
@@ -213,16 +265,6 @@ void loop() {
 
       // UI update
       Animation_stop();
-    }
-  }
-
-  if (digitalRead(STOP_SW_PIN) == STOP_SW_ACTIVE) { // if Stop Switch are press
-    if (!lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog not show
-      lv_obj_clear_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // show Emergency Dialog
-    }
-  } else { // but if Stop Switch not press
-    if (lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog show
-      lv_obj_add_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // hide Emergency Dialog
     }
   }
 
