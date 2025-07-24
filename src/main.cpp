@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Preferences.h>
 #include <lvgl.h>
 #include <ATD3.5-S3.h>
 #include "PilotController.h"
@@ -16,17 +17,22 @@ static const char * TAG = "Main";
 #define STOP_SW_ACTIVE (LOW)
 #define DS18B20_PIN   (4)
 
-#define MAX_CHARGE_CURRENT (MAX_CURRENT_6A) // Maximum current in Amperes
+#define MAX_CHARGE_CURRENT_DEFAULT (MAX_CURRENT_6A) // Maximum current in Amperes
 #define OVER_TEMP_THRESHOLD (60.0f)
 
+Preferences configs;
 PilotController pilotController;
 BL0940 bl0940;
 OneWire oneWire(DS18B20_PIN);
 DallasTemperature ds18b20(&oneWire);
 
+#define SETTINGS_KEY_MAX_CURRENT "max_current"
+
 static bool user_confirm_start_flag = false;
 static bool power_out = false;
 static float energy_at_start = -1.0f;
+static MaxAvailableCurrent_t max_current = MAX_CHARGE_CURRENT_DEFAULT;
+static float temp_C = DEVICE_DISCONNECTED_C;
 
 extern void Animation_play() ;
 extern void Animation_stop() ;
@@ -75,6 +81,12 @@ void startBtnClickHandle(lv_event_t * event) {
   lv_obj_add_flag(ui_start_btn, LV_OBJ_FLAG_HIDDEN);
 }
 
+void maxCurrentDropdownValueChangeHandle(lv_event_t * event) {
+  max_current = (MaxAvailableCurrent_t) lv_dropdown_get_selected(ui_max_current_dropdown);
+  configs.putUInt(SETTINGS_KEY_MAX_CURRENT, (uint32_t) max_current);
+  pilotController.setMaxCurrent(max_current);
+}
+
 float voltage;
 float current; // unit A
 float activePower; // unit W
@@ -118,11 +130,29 @@ void powerValueUpdate(lv_timer_t *) {
   }
 }
 
+void tempUpdateTask(void*) {
+  ds18b20.begin();
+
+  while(1) {
+    ds18b20.requestTemperatures();
+    temp_C = ds18b20.getTempCByIndex(0);
+    if (temp_C != DEVICE_DISCONNECTED_C) {
+      ESP_LOGV(TAG, "Temperature inbox is %.01f *C", temp_C);
+    } else {
+      ESP_LOGW(TAG, "Temperature sensor read failed");
+    }
+    delay(2000);
+  }
+  vTaskDelete(NULL);
+}
+
 void setup() {
   Serial.begin(115200);
 
   pinMode(POWER_OUT_PIN, OUTPUT);
   digitalWrite(POWER_OUT_PIN, LOW); // Set power output pin to LOW initially
+
+  pinMode(STOP_SW_PIN, INPUT_PULLUP);
 
   // Setup peripherals
   Display.begin(0); // rotation number 0
@@ -130,6 +160,7 @@ void setup() {
   Sound.begin();
   // Card.begin(); // uncomment if you want to Read/Write/Play/Load file in MicroSD Card
   bl0940.begin(Serial1, BL0940_RX_PIN, BL0940_TX_PIN); // RX pin - TX pin 
+  configs.begin("EVSE");
 
   // Map peripheral to LVGL
   Display.useLVGL(); // Map display to LVGL
@@ -157,8 +188,17 @@ void setup() {
   lv_label_set_text(ui_voltage_value_label, "-");
   lv_label_set_text(ui_current_value_label, "-");
 
+  if (configs.isKey(SETTINGS_KEY_MAX_CURRENT)) {
+    max_current = (MaxAvailableCurrent_t) configs.getUInt(SETTINGS_KEY_MAX_CURRENT);
+    if (max_current > MAX_CURRENT_30A) {
+      max_current = MAX_CHARGE_CURRENT_DEFAULT;
+    }
+  }
+  lv_dropdown_set_selected(ui_max_current_dropdown, (uint16_t) max_current);
+
   // Add event handle
   lv_obj_add_event_cb(ui_start_btn, startBtnClickHandle, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(ui_max_current_dropdown, maxCurrentDropdownValueChangeHandle, LV_EVENT_VALUE_CHANGED, NULL);
 
   bl0940.Reset();
   bl0940.setFrequency(50); // 50 Hz
@@ -166,13 +206,14 @@ void setup() {
   bl0940.setCurrentOffset(-52);
   bl0940.setActivePowerOffset(80);
 
-  pilotController.begin(MAX_CHARGE_CURRENT);
+  pilotController.begin(max_current);
   pilotController.onStateChange(onStateChangeCallback);
-
-  ds18b20.begin();
 
   // Add timer
   lv_timer_create(powerValueUpdate, 2000, NULL);
+
+  // Task
+  xTaskCreate(tempUpdateTask, "Temp Update Task", 4 * 1024, NULL, 5, NULL);
 }
 
 void loop() {
@@ -182,31 +223,29 @@ void loop() {
   bool protection_active = false;
 
   // Temperature protection
-  ds18b20.requestTemperatures();
-  float temp_c = ds18b20.getTempCByIndex(0);
-  if (temp_c >= OVER_TEMP_THRESHOLD) { // Check over temperature
+  if ((temp_C != DEVICE_DISCONNECTED_C) && (temp_C >= OVER_TEMP_THRESHOLD)) { // Check over temperature
     protection_active = true; // Over Temp Protect
   }
 
   // Over currant protection
   if (
-    ((MAX_CHARGE_CURRENT == MAX_CURRENT_6A) && (current > 8.0f)) ||
-    ((MAX_CHARGE_CURRENT == MAX_CURRENT_12A) && (current > 14.0f)) ||
-    ((MAX_CHARGE_CURRENT == MAX_CURRENT_18A) && (current > 20.0f)) ||
-    ((MAX_CHARGE_CURRENT == MAX_CURRENT_24A) && (current > 26.0f)) ||
-    ((MAX_CHARGE_CURRENT == MAX_CURRENT_30A) && (current > 32.0f))
+    ((max_current == MAX_CURRENT_6A) && (current > 8.0f)) ||
+    ((max_current == MAX_CURRENT_12A) && (current > 14.0f)) ||
+    ((max_current == MAX_CURRENT_18A) && (current > 20.0f)) ||
+    ((max_current == MAX_CURRENT_24A) && (current > 26.0f)) ||
+    ((max_current == MAX_CURRENT_30A) && (current > 32.0f))
   ) {
     protection_active = true; // Over Currant Protect
   }
 
   // Stop detect
   if (digitalRead(STOP_SW_PIN) == STOP_SW_ACTIVE) { // if Stop Switch are press
-    if (!lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog not show
+    if (lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog not show
       lv_obj_clear_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // show Emergency Dialog
     }
     protection_active = true; // Stop Switch Active
   } else { // but if Stop Switch not press
-    if (lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog show
+    if (!lv_obj_has_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN)) { // if Emergency Dialog show
       lv_obj_add_flag(ui_emergency_dialog, LV_OBJ_FLAG_HIDDEN); // hide Emergency Dialog
     }
   }
