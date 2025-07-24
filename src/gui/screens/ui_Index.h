@@ -15,7 +15,6 @@ extern void ui_Index_screen_init(void);
 extern void ui_Index_screen_destroy(void);
 extern lv_obj_t * ui_Index;
 extern lv_obj_t * ui_Panel1;
-extern lv_obj_t * ui_time_label;
 extern lv_obj_t * ui_Panel2;
 extern lv_obj_t * ui_Image1;
 extern lv_obj_t * ui_bar_body_box;
@@ -45,6 +44,8 @@ extern lv_obj_t * ui_emergency_dialog;
 extern lv_obj_t * ui_Image4;
 extern lv_obj_t * ui_Label3;
 extern lv_obj_t * ui_Label5;
+extern void ui_event_Button2(lv_event_t * e);
+extern lv_obj_t * ui_Button2;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus

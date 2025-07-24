@@ -5891,7 +5891,7 @@
                         "flags": 49,
                         "strtype": "OBJECT/Size",
                         "intarray": [
-                          90,
+                          100,
                           1
                         ],
                         "InheritedType": 7
@@ -5990,8 +5990,14 @@
                               {
                                 "nid": 10450,
                                 "strtype": "_style/Text_Font",
-                                "strval": "montserrat_18",
+                                "strval": "montserrat_20",
                                 "InheritedType": 3
+                              },
+                              {
+                                "nid": 10510,
+                                "strtype": "_style/Bg_Radius",
+                                "integer": 10,
+                                "InheritedType": 6
                               },
                               {
                                 "nid": 10730,
@@ -6027,7 +6033,7 @@
                               {
                                 "nid": 10450,
                                 "strtype": "_style/Text_Font",
-                                "strval": "montserrat_18",
+                                "strval": "montserrat_20",
                                 "InheritedType": 3
                               }
                             ],
@@ -7205,7 +7211,7 @@
     "uiExportFolderPath": "C:\\Users\\sonth\\GitHub\\ATD3.5-S3-EVSE\\src\\gui",
     "projectExportFolderPath": "C:\\Users\\sonth\\GitHub\\ATD3.5-S3-EVSE\\src\\gui",
     "custom_variable_prefix": "uic",
-    "backup_cnt": 24,
+    "backup_cnt": 30,
     "autosave_cnt": 0,
     "group_color_cnt": 0,
     "lvgl_version": "8.3.6",

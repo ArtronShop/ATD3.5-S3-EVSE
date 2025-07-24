@@ -7,7 +7,6 @@
 
 lv_obj_t * ui_Index = NULL;
 lv_obj_t * ui_Panel1 = NULL;
-lv_obj_t * ui_time_label = NULL;
 lv_obj_t * ui_Panel2 = NULL;
 lv_obj_t * ui_Image1 = NULL;
 lv_obj_t * ui_bar_body_box = NULL;
@@ -37,7 +36,16 @@ lv_obj_t * ui_emergency_dialog = NULL;
 lv_obj_t * ui_Image4 = NULL;
 lv_obj_t * ui_Label3 = NULL;
 lv_obj_t * ui_Label5 = NULL;
+lv_obj_t * ui_Button2 = NULL;
 // event funtions
+void ui_event_Button2(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) {
+        _ui_screen_change(&ui_settings, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_settings_screen_init);
+    }
+}
 
 // build funtions
 
@@ -57,15 +65,6 @@ void ui_Index_screen_init(void)
     lv_obj_set_style_bg_color(ui_Panel1, lv_color_hex(0x3E3D5B), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_Panel1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_side(ui_Panel1, LV_BORDER_SIDE_NONE, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    ui_time_label = lv_label_create(ui_Panel1);
-    lv_obj_set_width(ui_time_label, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_time_label, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_align(ui_time_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_time_label, "22:59");
-    lv_obj_set_style_text_color(ui_time_label, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui_time_label, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_time_label, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_Panel2 = lv_obj_create(ui_Index);
     lv_obj_set_width(ui_Panel2, 140);
@@ -370,6 +369,21 @@ void ui_Index_screen_init(void)
     lv_obj_set_style_text_opa(ui_Label5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label5, &ui_font_Kanit20, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    ui_Button2 = lv_btn_create(ui_Index);
+    lv_obj_set_width(ui_Button2, 78);
+    lv_obj_set_height(ui_Button2, 76);
+    lv_obj_set_x(ui_Button2, 1);
+    lv_obj_set_y(ui_Button2, 5);
+    lv_obj_set_style_bg_color(ui_Button2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_Button2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_img_src(ui_Button2, &ui_img_settings_png, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_img_recolor(ui_Button2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_img_recolor_opa(ui_Button2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui_Button2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(ui_Button2, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_add_event_cb(ui_Button2, ui_event_Button2, LV_EVENT_ALL, NULL);
+
 }
 
 void ui_Index_screen_destroy(void)
@@ -379,7 +393,6 @@ void ui_Index_screen_destroy(void)
     // NULL screen variables
     ui_Index = NULL;
     ui_Panel1 = NULL;
-    ui_time_label = NULL;
     ui_Panel2 = NULL;
     ui_Image1 = NULL;
     ui_bar_body_box = NULL;
@@ -409,5 +422,6 @@ void ui_Index_screen_destroy(void)
     ui_Image4 = NULL;
     ui_Label3 = NULL;
     ui_Label5 = NULL;
+    ui_Button2 = NULL;
 
 }

@@ -120,6 +120,7 @@ void ui_init(void)
                                                false, LV_FONT_DEFAULT);
     lv_disp_set_theme(dispp, theme);
     ui_Index_screen_init();
+    ui_settings_screen_init();
     ui____initial_actions0 = lv_obj_create(NULL);
     lv_disp_load_scr(ui_Index);
 }
@@ -127,4 +128,5 @@ void ui_init(void)
 void ui_destroy(void)
 {
     ui_Index_screen_destroy();
+    ui_settings_screen_destroy();
 }
